@@ -103,6 +103,24 @@ namespace Hazel {
 
 	#elif def HZ_PLATFORM_LINUX
 		#error Linux abosulute directory path not implemented
+
+	#else
+		#error Unsupported platform!
+	#endif
+	}
+
+	std::string Application::ResolvePath(const std::string& path)
+	{
+		// This will always return an absolute path
+	#ifdef HZ_PLATFORM_WINDOWS
+		std::filesystem::path fsPath(path);
+		if (fsPath.is_absolute())
+			return path;
+		return GetApplicationDirectory() + "\\" + path;
+
+	#elif def HZ_PLATFORM_LINUX
+		#error Linux resolve directory path not implemented
+
 	#else
 		#error Unsupported platform!
 	#endif

@@ -32,6 +32,7 @@ namespace Hazel {
 
 		inline static Application& Get() { return *s_Instance; }
 		inline static const std::string& GetApplicationDirectory() { return s_AbsoluteDirectoryPath; }
+		static std::string ResolvePath(const std::string& path);
 	private:
 		bool OnWindowClose(WindowCloseEvent& e);
 

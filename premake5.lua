@@ -165,6 +165,7 @@ project "Sandbox"
 			"dl",
 			"pthread",
 		}
+
 		defines
 		{
 			"HZ_PLATFORM_LINUX"
@@ -180,6 +181,14 @@ project "Sandbox"
 		defines
 		{
 			"HZ_PLATFORM_WINDOWS"
+		}
+
+		postbuildcommands
+		{
+			-- Delete old assets folder and copy the new assets folder, making sure removed assets are also removed in bin
+			"if exist \"%{cfg.buildtarget.directory}assets/\" del \"%{cfg.buildtarget.directory}/assets/\"",
+			-- Copy the new assets folder
+			"{copy} \"%{prj.location}assets\" \"%{cfg.buildtarget.directory}/assets/\""
 		}
 
 	filter "configurations:Debug"
