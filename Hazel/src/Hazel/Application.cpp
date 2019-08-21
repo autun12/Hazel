@@ -97,9 +97,24 @@ namespace Hazel {
 			std::string absOwnPath(absOwnPathW.begin(), absOwnPathW.end());
 		#endif
 
-		// absOwnPath contains for example "C:\..\Sandbox\Sandbox.exe"
+		// absOwnPath could contain \.. in its path, we remove it
+		// example: "C:\subDir\subsubDir\..\Sandbox" => "C:\subDir\Sandbox"
+		size_t foundIndex = absOwnPath.find("\\..");
+		while (foundIndex < absOwnPath.length())
+		{
+			size_t prevIndex = absOwnPath.rfind("\\", foundIndex - 1);
+			absOwnPath.erase(prevIndex, foundIndex - prevIndex + 3);
+
+			// search again
+			foundIndex = absOwnPath.find("\\..");
+		}
+
+		// absOwnPath contains for example "C:\Sandbox\Sandbox.exe"
 		// Remove the Sandbox.exe part from the end
-		return absOwnPath.substr(0, absOwnPath.rfind("\\"));
+		size_t absOwnDirIndex = absOwnPath.rfind("\\");
+		if (absOwnDirIndex < absOwnPath.length())
+			return absOwnPath.substr(0, absOwnDirIndex + 1);
+		return absOwnPath;
 
 	#elif def HZ_PLATFORM_LINUX
 		#error Linux abosulute directory path not implemented
@@ -116,7 +131,7 @@ namespace Hazel {
 		std::filesystem::path fsPath(path);
 		if (fsPath.is_absolute())
 			return path;
-		return GetApplicationDirectory() + "\\" + path;
+		return GetApplicationDirectory() + path;
 
 	#elif def HZ_PLATFORM_LINUX
 		#error Linux resolve directory path not implemented
