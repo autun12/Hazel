@@ -6,6 +6,8 @@ int main(int argc, char** argv)
 {
 	Hazel::Log::Init();
 	HZ_CORE_WARN("Initialized Log!");
+    Hazel::Application::CreateAbsoluteDirectoryPath(argv[0]);
+
 	int a = 5;
 	HZ_INFO("Hello! Var={0}", a);
 

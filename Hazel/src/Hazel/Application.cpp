@@ -19,8 +19,7 @@ namespace Hazel {
 		HZ_CORE_ASSERT(!s_Instance, "Application already exists!");
 		s_Instance = this;
 
-		s_AbsoluteDirectoryPath = CreateAbsoluteDirectoryPath();
-		HZ_CORE_TRACE("Running application from '{0}'", GetApplicationDirectory().c_str());
+		HZ_CORE_TRACE("Running application from '{0}'", GetApplicationDirectoryPath().c_str());
 
 		m_Window = std::unique_ptr<Window>(Window::Create());
 		m_Window->SetEventCallback(HZ_BIND_EVENT_FN(Application::OnEvent));
@@ -78,7 +77,7 @@ namespace Hazel {
 		return true;
 	}
 
-	std::string Application::CreateAbsoluteDirectoryPath()
+	void Application::CreateAbsoluteDirectoryPath(const char* argv0)
 	{
 	#ifdef HZ_PLATFORM_WINDOWS
 		// When NULL is passed to GetModuleHandle, the handle of the exe itself is returned
@@ -86,38 +85,114 @@ namespace Hazel {
 		HZ_CORE_ASSERT(hModule, "Module handle is NULL");
 
 		// Extract the path to this
-		TCHAR ownPath[MAX_PATH];
-		GetModuleFileName(hModule, ownPath, (sizeof(ownPath)));
+		TCHAR ownPathT[MAX_PATH];
+		GetModuleFileName(hModule, ownPathT, sizeof(ownPathT));
 
 		// Convert TCHAR to std::string
 		#ifndef UNICODE
-			std::string absOwnPath(ownPath);
+			std::string ownPath(ownPathT);
 		#else
-			std::wstring absOwnPathW(ownPath);
-			std::string absOwnPath(absOwnPathW.begin(), absOwnPathW.end());
+			std::wstring ownPathW(ownPathT);
+			std::string ownPath(ownPathW.begin(), ownPathW.end());
 		#endif
 
-		// absOwnPath could contain \.. in its path, we remove it
+		// ownPath could contain \.. in its path, we remove it
 		// example: "C:\subDir\subsubDir\..\Sandbox" => "C:\subDir\Sandbox"
-		size_t foundIndex = absOwnPath.find("\\..");
-		while (foundIndex < absOwnPath.length())
+		size_t foundIndex = ownPath.find("\\..");
+		while (foundIndex < ownPath.length())
 		{
-			size_t prevIndex = absOwnPath.rfind("\\", foundIndex - 1);
-			absOwnPath.erase(prevIndex, foundIndex - prevIndex + 3);
+			size_t prevIndex = ownPath.rfind("\\", foundIndex - 1);
+			ownPath.erase(prevIndex, foundIndex - prevIndex + 3);
 
 			// search again
-			foundIndex = absOwnPath.find("\\..");
+			foundIndex = ownPath.find("\\..");
 		}
 
-		// absOwnPath contains for example "C:\Sandbox\Sandbox.exe"
+		// ownPath contains for example "C:\Sandbox\Sandbox.exe"
 		// Remove the Sandbox.exe part from the end
-		size_t absOwnDirIndex = absOwnPath.rfind("\\");
-		if (absOwnDirIndex < absOwnPath.length())
-			return absOwnPath.substr(0, absOwnDirIndex + 1);
-		return absOwnPath;
+		size_t absOwnDirIndex = ownPath.rfind("\\");
+		if (absOwnDirIndex < ownPath.length())
+			s_AbsoluteDirectoryPath = ownPath.substr(0, absOwnDirIndex + 1);
+		else
+			s_AbsoluteDirectoryPath = ownPath;
+		return;
 
 	#elif def HZ_PLATFORM_LINUX
-		#error Linux abosulute directory path not implemented
+		// absolute pathname to current working directory of calling process
+		char save_pwd[PATH_MAX];
+		getcwd(save_pwd, sizeof(save_pwd));
+
+		// create a working copy of argv0
+		char save_argv0[PATH_MAX];
+		strncpy(save_argv0, argv0, sizeof(save_argv0));
+		save_argv0[sizeof(save_argv0) - 1] = 0;
+
+		// get the path variable
+		char save_path[PATH_MAX];
+		strncpy(save_path, getenv("PATH"), sizeof(save_path));
+		save_path[sizeof(save_path) - 1] = 0;
+
+		// Now let us try and resolve any of these paths
+		char save_realpath[PATH_MAX];
+		char newpath[PATH_MAX + 256], newpath2[PATH_MAX + 256];
+		char pathSeperator = '/';
+		char pathSeperatorString[2] = "/";
+		char pathSeperatorList[8] = ":"; // could be ":; "
+		save_realpath[0] = 0;
+
+		// Option 1: argv[0] contains an absolute path
+		if (save_argv0[0] == pathSeperator) {
+			realpath(save_argv0, newpath);
+			if (!access(newpath, F_OK)) {
+				strncpy(save_realpath, newpath, sizeof(save_realpath));
+				save_realpath[sizeof(save_realpath) - 1] = 0;
+				s_AbsoluteDirectoryPath = save_realpath;
+				return;
+			}
+			HZ_CORE_ASSERT(false, "ERROR: access failed (option 1)");
+		} // Option 2: argv[0] contains a relative path to pwd
+		else if (strchr(save_argv0, pathSeperator)) {
+			strncpy(newpath2, save_pwd, sizeof(newpath2));
+			newpath2[sizeof(newpath2) - 1] = 0;
+			strncat(newpath2, pathSeperatorString, sizeof(newpath2));
+			newpath2[sizeof(newpath2) - 1] = 0;
+			strncat(newpath2, save_argv0, sizeof(newpath2));
+			newpath2[sizeof(newpath2) - 1] = 0;
+
+			realpath(newpath2, newpath);
+			if (!access(newpath, F_OK)) {
+				strncpy(save_realpath, newpath, sizeof(save_realpath));
+				save_realpath[sizeof(save_realpath) - 1] = 0;
+				s_AbsoluteDirectoryPath = save_realpath;
+				return;
+			}
+			HZ_CORE_ASSERT(false, "ERROR: access failed (option 2)");
+		} // Option 3: searching $PATH for any possible relative path location...
+		else {
+			char* saveptr;
+			char* pathitem;
+			for (pathitem = strtok_r(save_path, pathSeperatorList, &saveptr);
+				 pathitem; pathitem = strtok_r(NULL, pathSeperatorList, &saveptr)) {
+				strncpy(newpath2, pathitem, sizeof(newpath2));
+				newpath2[sizeof(newpath2) - 1] = 0;
+				strncat(newpath2, pathSeperatorString, sizeof(newpath2));
+				newpath2[sizeof(newpath2) - 1] = 0;
+				strncat(newpath2, save_argv0, sizeof(newpath2));
+				newpath2[sizeof(newpath2) - 1] = 0;
+
+				realpath(newpath2, newpath);
+				if (!access(newpath, F_OK)) {
+					strncpy(save_realpath, newpath, sizeof(save_realpath));
+					save_realpath[sizeof(save_realpath) - 1] = 0;
+					s_AbsoluteDirectoryPath = save_realpath;
+					return;
+				}
+			}
+			HZ_CORE_ASSERT(false, "ERROR: access failed (option 3)");
+		}
+		// if we get here, we have tried all three methods on argv[0]
+		// and still haven't succeeded. Include fallback methods here.
+		// With fallback present, comment HZ_CORE_ASSERT option 3.
 
 	#else
 		#error Unsupported platform!
@@ -127,18 +202,10 @@ namespace Hazel {
 	std::string Application::ResolvePath(const std::string& path)
 	{
 		// This will always return an absolute path
-	#ifdef HZ_PLATFORM_WINDOWS
 		std::filesystem::path fsPath(path);
 		if (fsPath.is_absolute())
 			return path;
-		return GetApplicationDirectory() + path;
-
-	#elif def HZ_PLATFORM_LINUX
-		#error Linux resolve directory path not implemented
-
-	#else
-		#error Unsupported platform!
-	#endif
+		return GetApplicationDirectoryPath() + path;
 	}
 
 }
