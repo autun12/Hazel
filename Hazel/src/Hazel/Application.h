@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "Core.h"
 
 #include "Window.h"
@@ -29,8 +31,11 @@ namespace Hazel {
 		inline Window& GetWindow() { return *m_Window; }
 
 		inline static Application& Get() { return *s_Instance; }
+		inline static const std::string& GetApplicationDirectory() { return s_AbsoluteDirectoryPath; }
 	private:
 		bool OnWindowClose(WindowCloseEvent& e);
+
+		static std::string CreateAbsoluteDirectoryPath();
 	private:
 		std::unique_ptr<Window> m_Window;
 		ImGuiLayer* m_ImGuiLayer;
@@ -39,6 +44,7 @@ namespace Hazel {
 		float m_LastFrameTime = 0.0f;
 	private:
 		static Application* s_Instance;
+		static std::string s_AbsoluteDirectoryPath;
 	};
 
 	// To be defined in CLIENT

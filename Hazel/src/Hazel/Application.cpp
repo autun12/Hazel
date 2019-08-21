@@ -12,11 +12,15 @@
 namespace Hazel {
 
 	Application* Application::s_Instance = nullptr;
+	std::string Application::s_AbsoluteDirectoryPath;
 
 	Application::Application()
 	{
 		HZ_CORE_ASSERT(!s_Instance, "Application already exists!");
 		s_Instance = this;
+
+		s_AbsoluteDirectoryPath = CreateAbsoluteDirectoryPath();
+		HZ_CORE_TRACE("Running application from '{0}'", GetApplicationDirectory().c_str());
 
 		m_Window = std::unique_ptr<Window>(Window::Create());
 		m_Window->SetEventCallback(HZ_BIND_EVENT_FN(Application::OnEvent));
@@ -72,6 +76,36 @@ namespace Hazel {
 	{
 		m_Running = false;
 		return true;
+	}
+
+	std::string Application::CreateAbsoluteDirectoryPath()
+	{
+	#ifdef HZ_PLATFORM_WINDOWS
+		// When NULL is passed to GetModuleHandle, the handle of the exe itself is returned
+		HMODULE hModule = GetModuleHandle(NULL);
+		HZ_CORE_ASSERT(hModule, "Module handle is NULL");
+
+		// Extract the path to this
+		TCHAR ownPath[MAX_PATH];
+		GetModuleFileName(hModule, ownPath, (sizeof(ownPath)));
+
+		// Convert TCHAR to std::string
+		#ifndef UNICODE
+			std::string absOwnPath(ownPath);
+		#else
+			std::wstring absOwnPathW(ownPath);
+			std::string absOwnPath(absOwnPathW.begin(), absOwnPathW.end());
+		#endif
+
+		// absOwnPath contains for example "C:\..\Sandbox\Sandbox.exe"
+		// Remove the Sandbox.exe part from the end
+		return absOwnPath.substr(0, absOwnPath.rfind("\\"));
+
+	#elif def HZ_PLATFORM_LINUX
+		#error Linux abosulute directory path not implemented
+	#else
+		#error Unsupported platform!
+	#endif
 	}
 
 }
