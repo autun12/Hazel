@@ -77,7 +77,7 @@ namespace Hazel {
 		return true;
 	}
 
-	void Application::CreateAbsoluteDirectoryPath(const char* argv0)
+	void Application::CreateAbsoluteDirectoryPath(const char* argv0, const bool useFallback)
 	{
 	#ifdef HZ_PLATFORM_WINDOWS
 		// When NULL is passed to GetModuleHandle, the handle of the exe itself is returned
@@ -143,13 +143,12 @@ namespace Hazel {
 		// Option 1: argv[0] contains an absolute path
 		if (save_argv0[0] == pathSeperator) {
 			realpath(save_argv0, newpath);
-			if (!access(newpath, F_OK)) {
-				strncpy(save_realpath, newpath, sizeof(save_realpath));
-				save_realpath[sizeof(save_realpath) - 1] = 0;
-				s_AbsoluteDirectoryPath = save_realpath;
-				return;
-			}
-			HZ_CORE_ASSERT(false, "ERROR: access failed (option 1)");
+			HZ_CORE_ASSERT(access(newpath, F_OK), "Couldn't access path of running executable (option 1)");
+			strncpy(save_realpath, newpath, sizeof(save_realpath));
+			save_realpath[sizeof(save_realpath) - 1] = 0;
+			s_AbsoluteDirectoryPath = save_realpath;
+			return;
+
 		} // Option 2: argv[0] contains a relative path to pwd
 		else if (strchr(save_argv0, pathSeperator)) {
 			strncpy(newpath2, save_pwd, sizeof(newpath2));
@@ -160,19 +159,18 @@ namespace Hazel {
 			newpath2[sizeof(newpath2) - 1] = 0;
 
 			realpath(newpath2, newpath);
-			if (!access(newpath, F_OK)) {
-				strncpy(save_realpath, newpath, sizeof(save_realpath));
-				save_realpath[sizeof(save_realpath) - 1] = 0;
-				s_AbsoluteDirectoryPath = save_realpath;
-				return;
-			}
-			HZ_CORE_ASSERT(false, "ERROR: access failed (option 2)");
+			HZ_CORE_ASSERT(access(newpath, F_OK), "Couldn't access path of running executable (option 2)");
+			strncpy(save_realpath, newpath, sizeof(save_realpath));
+			save_realpath[sizeof(save_realpath) - 1] = 0;
+			s_AbsoluteDirectoryPath = save_realpath;
+			return;
+
 		} // Option 3: searching $PATH for any possible relative path location...
 		else {
 			char* saveptr;
 			char* pathitem;
 			for (pathitem = strtok_r(save_path, pathSeperatorList, &saveptr);
-				 pathitem; pathitem = strtok_r(NULL, pathSeperatorList, &saveptr)) {
+			     pathitem; pathitem = strtok_r(NULL, pathSeperatorList, &saveptr)) {
 				strncpy(newpath2, pathitem, sizeof(newpath2));
 				newpath2[sizeof(newpath2) - 1] = 0;
 				strncat(newpath2, pathSeperatorString, sizeof(newpath2));
@@ -188,11 +186,18 @@ namespace Hazel {
 					return;
 				}
 			}
-			HZ_CORE_ASSERT(false, "ERROR: access failed (option 3)");
+			HZ_CORE_ASSERT(useFallback, "Couldn't determine path of running executable ($PATH didn't have an accessable location)");
 		}
+
 		// if we get here, we have tried all three methods on argv[0]
-		// and still haven't succeeded. Include fallback methods here.
-		// With fallback present, comment HZ_CORE_ASSERT option 3.
+		// and still haven't succeeded. Our last resort is reading
+		// to use "/proc/self/exe", but this will fail if has a hard
+		// link to the program, returning the wrong location.
+		ssize_t written = ::readlink("proc/self/exe", save_realpath, sizeof(save_realpath) - 1);
+		HZ_CORE_ASSERT(written != -1, "Couldn't determine path of running executable (readlink failed)");
+		save_realpath[written] = 0;
+		s_AbsoluteDirectoryPath = save_realpath;
+		return;
 
 	#else
 		#error Unsupported platform!
