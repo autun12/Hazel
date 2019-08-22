@@ -32,7 +32,7 @@ namespace Hazel {
 
 		inline static Application& Get() { return *s_Instance; }
 
-		static void CreateAbsoluteDirectoryPath(const char* argv0 const bool useFallback = true);
+		static void CreateAbsoluteDirectoryPath(const char* argv0, const bool useFallback = true);
 		inline static const std::string& GetApplicationDirectoryPath() { return s_AbsoluteDirectoryPath; }
 		static std::string ResolvePath(const std::string& path);
 	private:
