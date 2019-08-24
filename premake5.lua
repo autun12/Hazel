@@ -19,6 +19,13 @@ IncludeDir["ImGui"] = "Hazel/vendor/imgui"
 IncludeDir["glm"] = "Hazel/vendor/glm"
 IncludeDir["stb_image"] = "Hazel/vendor/stb_image"
 
+PostbuildCmd = {}
+PostbuildCmd["SandboxAssets"] = {
+	["EchoMessage"] = "{ECHO} Adding assets from \"%{prj.location}assets\".",
+	["DeleteOld"] = "{DELETE} \"%{cfg.buildtarget.directory}assets/\"",
+	["AddNew"] = "{COPY} \"%{prj.location}assets\" \"%{cfg.buildtarget.directory}assets/\"",
+}
+
 group "Dependencies"
 	include "Hazel/vendor/GLFW"
 	include "Hazel/vendor/Glad"
@@ -189,10 +196,8 @@ project "Sandbox"
 
 		postbuildcommands
 		{
-            -- Adding assets to build directory
-            "{ECHO} Adding assets from \"%{prj.location}assets\".",
-            --"{DELETE} \"%{cfg.buildtarget.directory}assets/\"",
-            "{COPY} \"%{prj.location}assets\" \"%{cfg.buildtarget.directory}assets/\"",
+			PostbuildCmd["SandboxAssets"]["EchoMessage"],
+			PostbuildCmd["SandboxAssets"]["AddNew"]
 		}
 
 	filter "configurations:Release"
@@ -200,12 +205,10 @@ project "Sandbox"
 		runtime "Release"
 		optimize "on"
 
-        postbuildcommands
+		postbuildcommands
 		{
-            -- Adding assets to build directory
-            "{ECHO} Adding assets from \"%{prj.location}assets\".",
-            --"{DELETE} \"%{cfg.buildtarget.directory}assets/\"",
-            "{COPY} \"%{prj.location}assets\" \"%{cfg.buildtarget.directory}assets/\"",
+			PostbuildCmd["SandboxAssets"]["EchoMessage"],
+			PostbuildCmd["SandboxAssets"]["AddNew"]
 		}
 
 	filter "configurations:Dist"
@@ -213,10 +216,9 @@ project "Sandbox"
 		runtime "Release"
 		optimize "on"
 
-        postbuildcommands
+		postbuildcommands
 		{
-            -- Adding assets to build directory
-            "{ECHO} Adding assets from \"%{prj.location}assets\".",
-            "{DELETE} \"%{cfg.buildtarget.directory}assets/\"",
-            "{COPY} \"%{prj.location}assets\" \"%{cfg.buildtarget.directory}assets/\"",
+			PostbuildCmd["SandboxAssets"]["EchoMessage"],
+			PostbuildCmd["SandboxAssets"]["DeleteOld"],
+			PostbuildCmd["SandboxAssets"]["AddNew"]
 		}
