@@ -21,9 +21,9 @@ IncludeDir["stb_image"] = "Hazel/vendor/stb_image"
 
 PostbuildCmd = {}
 PostbuildCmd["SandboxAssets"] = {
-	["EchoMessage"] = "{ECHO} Adding assets from \"%{prj.location}assets\".",
-	["DeleteOld"] = "{DELETE} \"%{cfg.buildtarget.directory}assets/\"",
-	["AddNew"] = "{COPY} \"%{prj.location}assets\" \"%{cfg.buildtarget.directory}assets/\"",
+	["EchoMessage"] = "{ECHO} Adding assets from \"%{prj.location}/assets\".",
+	["DeleteOld"] = "{DELETE} \"%{cfg.buildtarget.directory}/assets/\"",
+	["AddNew"] = "{COPY} \"%{prj.location}/assets\" \"%{cfg.buildtarget.directory}/assets/\"",
 }
 
 group "Dependencies"
