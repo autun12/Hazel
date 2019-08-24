@@ -16,4 +16,7 @@
 
 #ifdef HZ_PLATFORM_WINDOWS
 	#include <Windows.h>
+
+#elif def HZ_PLATFORM_LINUX
+	#include <unistd.h>
 #endif

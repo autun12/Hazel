@@ -187,12 +187,36 @@ project "Sandbox"
 		runtime "Debug"
 		symbols "on"
 
+		postbuildcommands
+		{
+            -- Adding assets to build directory
+            "{ECHO} Adding assets from \"%{prj.location}assets\".",
+            --"{DELETE} \"%{cfg.buildtarget.directory}assets/\"",
+            "{COPY} \"%{prj.location}assets\" \"%{cfg.buildtarget.directory}assets/\"",
+		}
+
 	filter "configurations:Release"
 		defines "HZ_RELEASE"
 		runtime "Release"
 		optimize "on"
 
+        postbuildcommands
+		{
+            -- Adding assets to build directory
+            "{ECHO} Adding assets from \"%{prj.location}assets\".",
+            --"{DELETE} \"%{cfg.buildtarget.directory}assets/\"",
+            "{COPY} \"%{prj.location}assets\" \"%{cfg.buildtarget.directory}assets/\"",
+		}
+
 	filter "configurations:Dist"
 		defines "HZ_DIST"
 		runtime "Release"
 		optimize "on"
+
+        postbuildcommands
+		{
+            -- Adding assets to build directory
+            "{ECHO} Adding assets from \"%{prj.location}assets\".",
+            "{DELETE} \"%{cfg.buildtarget.directory}assets/\"",
+            "{COPY} \"%{prj.location}assets\" \"%{cfg.buildtarget.directory}assets/\"",
+		}
